@@ -87,9 +87,29 @@ abstract class AbstractStatusRequest extends AbstractRequest
      */
     protected function buildHeaders()
     {
+        $url = $this->getEndpoint();
+
+        $timestamp = (new \DateTime('now', new \DateTimeZone('UTC')))->format('D, d M Y H:i:s T');
+
+        $path = parse_url($url, PHP_URL_PATH);
+        $query = parse_url($url, PHP_URL_QUERY);
+        $anchor = parse_url($url, PHP_URL_FRAGMENT);
+
+        $requestUri = $path . ($query ? '?' . $query : '') . ($anchor ? '#' . $anchor : '');
+
         $contentType = 'application/json';
+        $hashedJsonBody = hash('sha512', '');
+
+        $parts = array('GET', $hashedJsonBody, $contentType, $timestamp, $requestUri);
+
+        $str = join("\n", $parts);
+        $digest = hash_hmac('sha512', $str, $this->getSecretKey(), true);
+        $signature = base64_encode($digest);
 
         $headers = array(
+            'Date' => $timestamp,
+            'X-Date' => $timestamp,
+            'X-Signature' => $signature,
             'Content-Type' => $contentType,
             'Accept' => $contentType,
             'Authorization' => "Basic " . base64_encode($this->getUsername() . ":" . $this->getPassword()),
